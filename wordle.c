@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <regex.h>
+#include <time.h>
 
 #include <security/pam_modules.h>
 #include <security/pam_ext.h>
@@ -10,7 +11,7 @@
 char DICT[] = "/usr/share/dict/words";
 
 // Fetches a 5 character word from a dict
-// Places the nth word in the char[] pointed to by word
+// Places the nth word in the char[] pointed to by word (assumes word is not null)
 // Returns the count of 5 character words in the dict on success or a negative int on failure
 int fetch_word(char* dict, int n, char* word) {
     int word_count = 0;
@@ -39,7 +40,9 @@ int fetch_word(char* dict, int n, char* word) {
             rmatch = regexec(&regex, w, 0, NULL, 0);
             if (rmatch == 0) {
                 if (word_count == n) {
-                    word = w;
+                    for (size_t i = 0; i < strlen(word) && i < strlen(w); i++) {
+                        word[i] = w[i];
+                    }
                 }
                 word_count += 1;
             }
@@ -59,9 +62,16 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **ar
     retval = pam_prompt(pamh, PAM_PROMPT_ECHO_ON, &resp, "Continue? (y/n)\n:");
 
     if (retval == PAM_SUCCESS && strncmp("y", resp, 1) == 0) {
-        char word[5];
+        char word[5] = "linux";
         int word_count = fetch_word(DICT, 0, word);
         pam_info(pamh, "word count: %d", word_count);
+
+        srand(time(0));
+        int wi = rand() % word_count;
+
+        fetch_word(DICT, wi, word);
+        pam_info(pamh, "word: %s", word);
+
         return PAM_SUCCESS;
     }
 
