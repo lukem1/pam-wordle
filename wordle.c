@@ -55,6 +55,32 @@ int fetch_word(char* dict, int n, char* word) {
     return word_count;
 }
 
+// Check if word is in dict
+// Returns 1 if yes, 0 if no, negative int on error
+int check_word(char *dict, char *word) {
+    FILE *stream;
+    if(stream = fopen(dict, "r")) {
+        // Read words from dict
+        char w[16];
+        while (fgets(w, 16, stream) != NULL) {
+            // Remove newlines
+            int wlen = strlen(w);
+            if (w[wlen-1] == '\n') {
+                w[wlen-1] = '\0';
+            }
+
+            if (strlen(w) == strlen(word) && strncmp(w, word, strlen(word)) == 0) {
+                return 1; // Word is in dict
+            }
+        }
+        fclose(stream);
+    } else {
+        return -1; // Failed to read dict
+    }
+
+    return 0; // Word is not in dict
+}
+
 
 // Handles a round of guessing
 // Prompts for a guess, checks if the guess is valid, and checks if the guess is correct
@@ -73,7 +99,12 @@ int wordle_guess(pam_handle_t *pamh, char* word, int round) {
         if (retval == PAM_SUCCESS) {
             // TODO: Should also check if the guess is a known word
             if (strlen(word) == strlen(resp)) {
-                valid = 1;
+                int known = check_word(DICT, resp);
+                if (known == 1) {
+                    valid = 1;
+                } else {
+                    pam_info(pamh, "Invalid guess: unkown word.");
+                }
             } else {
                 pam_info(pamh, "Invalid guess: guess length != word length.");
             }
@@ -102,7 +133,14 @@ int wordle_guess(pam_handle_t *pamh, char* word, int round) {
                 }
             }
 
-            if (hint_occurances < word_occurances) {
+            int resp_occurances = 0;
+            for (size_t j = 0; j < strlen(resp); j++) {
+                if (resp[i] == resp[j]) {
+                    resp_occurances += 1;
+                }
+            }
+
+            if (hint_occurances < word_occurances && resp_occurances <= word_occurances) {
                 hint[i] = '*'; // Letter is correct but in the wrong place
             } else {
                 hint[i] = 'X'; // Letter is incorrect
