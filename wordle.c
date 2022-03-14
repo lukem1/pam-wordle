@@ -157,32 +157,27 @@ int wordle_guess(pam_handle_t *pamh, char* word, int round) {
 }
 
 int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv) {
-    
-    int retval;
-    char *resp = NULL;
-    retval = pam_prompt(pamh, PAM_PROMPT_ECHO_ON, &resp, "Continue? (y/n)\n:");
+    pam_info(pamh, "--- Welcome to PAM-Wordle! ---\n\nA five character [a-z] word has been selected.\nYou have 6 attempts to guess the word.\n\nAfter each guess you will recieve a hint which indicates:\nX - what letters are wrong.\n* - what letters are in the wrong spot.\n[a-z] - what letters are correct.\n");
 
-    if (retval == PAM_SUCCESS && strncmp("y", resp, 1) == 0) {
-        char word[5] = "linux";
-        int word_count = fetch_word(DICT, 0, word);
+    char word[5] = "linux";
+    int word_count = fetch_word(DICT, 0, word);
 
-        srand(time(0));
-        int n = rand() % word_count;
+    srand(time(0));
+    int n = rand() % word_count;
 
-        fetch_word(DICT, n, word);
+    fetch_word(DICT, n, word);
 
-        for (int i = 0; i < 6; i++) {
-            int status = wordle_guess(pamh, word, i);
+    for (int i = 0; i < 6; i++) {
+        int status = wordle_guess(pamh, word, i);
 
-            if (status == 1) {
-                return PAM_SUCCESS;
-            } else if (status < 0) {
-                return PAM_AUTH_ERR;
-            }
+        if (status == 1) {
+            return PAM_SUCCESS;
+        } else if (status < 0) {
+            return PAM_AUTH_ERR;
         }
-
-        pam_info(pamh, "You lose.\nThe word was: %s", word);
     }
+
+    pam_info(pamh, "You lose.\nThe word was: %s", word);
 
     return PAM_AUTH_ERR;
 }
