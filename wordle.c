@@ -55,6 +55,69 @@ int fetch_word(char* dict, int n, char* word) {
     return word_count;
 }
 
+
+// Handles a round of guessing
+// Prompts for a guess, checks if the guess is valid, and checks if the guess is correct
+// Displays the result of the guess as follows: 
+// X - incorrect char, * - correct char in wrong location, or the char itself if it is correct and properly placed
+// Returns 1 on a valid and correct guess, 0 on a valid and incorrect guess, or a negative int on error
+int wordle_guess(pam_handle_t *pamh, char* word, int round) {
+    pam_info(pamh, "--- Attempt %d of 6 ---", round + 1);
+
+    int valid = 0;
+    char *resp = NULL;
+
+    while (valid == 0) {
+        int retval;
+        retval = pam_prompt(pamh, PAM_PROMPT_ECHO_ON, &resp, "Word: ");
+        if (retval == PAM_SUCCESS) {
+            // TODO: Should also check if the guess is a known word
+            if (strlen(word) == strlen(resp)) {
+                valid = 1;
+            } else {
+                pam_info(pamh, "Invalid guess: guess length != word length.");
+            }
+        } else {
+            return -1;
+        }
+    }
+    
+    // Build the next hint based on the guess
+    char hint[strlen(word)];
+    for (size_t i = 0; i < strlen(word); i++) {
+        if (word[i] == resp[i]) { // Letter is correct and properly placed
+            hint[i] = word[i];
+        } else {
+            int word_occurances = 0;
+            for (size_t j = 0; j < strlen(word); j++) {
+                if (resp[i] == word[j]) {
+                    word_occurances += 1;
+                }
+            }
+
+            int hint_occurances = 0;
+            for (size_t j = 0; j < strlen(hint); j++) {
+                if (resp[i] == hint[j]) {
+                    hint_occurances += 1;
+                }
+            }
+
+            if (hint_occurances < word_occurances) {
+                hint[i] = '*'; // Letter is correct but in the wrong place
+            } else {
+                hint[i] = 'X'; // Letter is incorrect
+            }
+        }
+    }
+
+    if (strncmp(hint, word, strlen(word)) == 0) { // Guess is correct
+        pam_info(pamh, "Correct!");
+        return 1;
+    }
+
+    pam_info(pamh, "Hint->%s", hint);
+}
+
 int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv) {
     
     int retval;
@@ -72,7 +135,15 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **ar
         fetch_word(DICT, wi, word);
         pam_info(pamh, "word: %s", word);
 
-        return PAM_SUCCESS;
+        for (int i = 0; i < 6; i++) {
+            int status = wordle_guess(pamh, word, i);
+
+            if (status == 1) {
+                return PAM_SUCCESS;
+            } else if (status < 0) {
+                return PAM_AUTH_ERR;
+            }
+        }
     }
 
     return PAM_AUTH_ERR;
