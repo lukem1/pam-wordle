@@ -127,13 +127,11 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **ar
     if (retval == PAM_SUCCESS && strncmp("y", resp, 1) == 0) {
         char word[5] = "linux";
         int word_count = fetch_word(DICT, 0, word);
-        pam_info(pamh, "word count: %d", word_count);
 
         srand(time(0));
-        int wi = rand() % word_count;
+        int n = rand() % word_count;
 
-        fetch_word(DICT, wi, word);
-        pam_info(pamh, "word: %s", word);
+        fetch_word(DICT, n, word);
 
         for (int i = 0; i < 6; i++) {
             int status = wordle_guess(pamh, word, i);
@@ -144,6 +142,8 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **ar
                 return PAM_AUTH_ERR;
             }
         }
+
+        pam_info(pamh, "You lose.\nThe word was: %s", word);
     }
 
     return PAM_AUTH_ERR;
