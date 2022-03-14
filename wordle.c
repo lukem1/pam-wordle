@@ -39,7 +39,7 @@ int fetch_word(char* dict, int n, char* word) {
             // If word matches regex add it to the count
             rmatch = regexec(&regex, w, 0, NULL, 0);
             if (rmatch == 0) {
-                if (word_count == n) {
+                if (word_count == n && word != NULL) {
                     for (size_t i = 0; i < strlen(word) && i < strlen(w); i++) {
                         word[i] = w[i];
                     }
@@ -85,7 +85,7 @@ int check_word(char *dict, char *word) {
 // Handles a round of guessing
 // Prompts for a guess, checks if the guess is valid, and checks if the guess is correct
 // Displays the result of the guess as follows: 
-// X - incorrect char, * - correct char in wrong location, or the char itself if it is correct and properly placed
+// ? - incorrect char, * - correct char in wrong location, or the char itself if it is correct and properly placed
 // Returns 1 on a valid and correct guess, 0 on a valid and incorrect guess, or a negative int on error
 int wordle_guess(pam_handle_t *pamh, char* word, int round) {
     pam_info(pamh, "--- Attempt %d of 6 ---", round + 1);
@@ -97,13 +97,15 @@ int wordle_guess(pam_handle_t *pamh, char* word, int round) {
         int retval;
         retval = pam_prompt(pamh, PAM_PROMPT_ECHO_ON, &resp, "Word: ");
         if (retval == PAM_SUCCESS) {
-            // TODO: Should also check if the guess is a known word
             if (strlen(word) == strlen(resp)) {
                 int known = check_word(DICT, resp);
                 if (known == 1) {
                     valid = 1;
-                } else {
+                } else if (known == 0) {
                     pam_info(pamh, "Invalid guess: unkown word.");
+                } else {
+                    pam_info(pamh, "Warning: error reading dictionary.");
+                    valid = 1;
                 }
             } else {
                 pam_info(pamh, "Invalid guess: guess length != word length.");
@@ -126,13 +128,6 @@ int wordle_guess(pam_handle_t *pamh, char* word, int round) {
                 }
             }
 
-            int hint_occurances = 0;
-            for (size_t j = 0; j < strlen(hint); j++) {
-                if (resp[i] == hint[j]) {
-                    hint_occurances += 1;
-                }
-            }
-
             int resp_occurances = 0;
             for (size_t j = 0; j < strlen(resp); j++) {
                 if (resp[i] == resp[j]) {
@@ -140,10 +135,10 @@ int wordle_guess(pam_handle_t *pamh, char* word, int round) {
                 }
             }
 
-            if (hint_occurances < word_occurances && resp_occurances <= word_occurances) {
+            if (resp_occurances <= word_occurances) {
                 hint[i] = '*'; // Letter is correct but in the wrong place
             } else {
-                hint[i] = 'X'; // Letter is incorrect
+                hint[i] = '?'; // Letter is incorrect
             }
         }
     }
@@ -157,15 +152,19 @@ int wordle_guess(pam_handle_t *pamh, char* word, int round) {
 }
 
 int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv) {
-    pam_info(pamh, "--- Welcome to PAM-Wordle! ---\n\nA five character [a-z] word has been selected.\nYou have 6 attempts to guess the word.\n\nAfter each guess you will recieve a hint which indicates:\nX - what letters are wrong.\n* - what letters are in the wrong spot.\n[a-z] - what letters are correct.\n");
+    pam_info(pamh, "--- Welcome to PAM-Wordle! ---\n\nA five character [a-z] word has been selected.\nYou have 6 attempts to guess the word.\n\nAfter each guess you will recieve a hint which indicates:\n? - what letters are wrong.\n* - what letters are in the wrong spot.\n[a-z] - what letters are correct.\n");
 
     char word[5] = "linux";
-    int word_count = fetch_word(DICT, 0, word);
+    int word_count = fetch_word(DICT, 0, NULL);
 
-    srand(time(0));
-    int n = rand() % word_count;
+    if (word_count > 0) {
+        srand(time(0));
+        int n = rand() % word_count;
 
-    fetch_word(DICT, n, word);
+        fetch_word(DICT, n, word);
+    } else {
+        pam_info(pamh, "Warning: error reading dictionary.");
+    }
 
     for (int i = 0; i < 6; i++) {
         int status = wordle_guess(pamh, word, i);
