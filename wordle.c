@@ -117,25 +117,26 @@ int wordle_guess(pam_handle_t *pamh, char* word, int round) {
     
     // Build the next hint based on the guess
     char hint[strlen(word)];
+
+    // Handle perfect and completely incorrect guesses
     for (size_t i = 0; i < strlen(word); i++) {
         if (word[i] == resp[i]) { // Letter is correct and properly placed
             hint[i] = word[i];
         } else {
-            int word_occurances = 0;
+            int misplacements = 0;
             for (size_t j = 0; j < strlen(word); j++) {
-                if (resp[i] == word[j]) {
-                    word_occurances += 1;
+                if (resp[i] == word[j] && word[j] != resp[j]) {
+                    misplacements += 1;
                 }
             }
-
-            int resp_occurances = 0;
-            for (size_t j = 0; j < strlen(resp); j++) {
-                if (resp[i] == resp[j]) {
-                    resp_occurances += 1;
-                }
-            }
-
-            if (resp_occurances <= word_occurances) {
+            
+            int handled_misplacements = 0;
+             for (size_t j = 0; j < i; j++) {
+                 if (resp[i] == resp[j] && word[j] != resp[j]) {
+                     handled_misplacements += 1;
+                 }
+             }
+            if (handled_misplacements < misplacements) {
                 hint[i] = '*'; // Letter is correct but in the wrong place
             } else {
                 hint[i] = '?'; // Letter is incorrect
