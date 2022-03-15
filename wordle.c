@@ -87,9 +87,7 @@ int check_word(char *dict, char *word) {
 // Displays the result of the guess as follows: 
 // ? - incorrect char, * - correct char in wrong location, or the char itself if it is correct and properly placed
 // Returns 1 on a valid and correct guess, 0 on a valid and incorrect guess, or a negative int on error
-int wordle_guess(pam_handle_t *pamh, char* word, int round) {
-    pam_info(pamh, "--- Attempt %d of 6 ---", round + 1);
-
+int wordle_guess(pam_handle_t *pamh, char* word) {
     int valid = 0;
     char *resp = NULL;
 
@@ -153,7 +151,9 @@ int wordle_guess(pam_handle_t *pamh, char* word, int round) {
 }
 
 int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv) {
-    pam_info(pamh, "--- Welcome to PAM-Wordle! ---\n\nA five character [a-z] word has been selected.\nYou have 6 attempts to guess the word.\n\nAfter each guess you will recieve a hint which indicates:\n? - what letters are wrong.\n* - what letters are in the wrong spot.\n[a-z] - what letters are correct.\n");
+    int rounds = 6; // Maximum number of guessing rounds
+
+    pam_info(pamh, "--- Welcome to PAM-Wordle! ---\n\nA five character [a-z] word has been selected.\nYou have %d attempts to guess the word.\n\nAfter each guess you will recieve a hint which indicates:\n? - what letters are wrong.\n* - what letters are in the wrong spot.\n[a-z] - what letters are correct.\n", rounds);
 
     char word[5] = "linux";
     int word_count = fetch_word(DICT, 0, NULL);
@@ -167,8 +167,10 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **ar
         pam_info(pamh, "Warning: error reading dictionary.");
     }
 
-    for (int i = 0; i < 6; i++) {
-        int status = wordle_guess(pamh, word, i);
+    for (int i = 0; i < rounds; i++) {
+        pam_info(pamh, "--- Attempt %d of %d ---", i + 1, rounds);
+
+        int status = wordle_guess(pamh, word);
 
         if (status == 1) {
             return PAM_SUCCESS;
