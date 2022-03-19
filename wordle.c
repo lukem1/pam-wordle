@@ -88,6 +88,8 @@ int check_word(char *dict, char *word) {
 // ? - incorrect char, * - correct char in wrong location, or the char itself if it is correct and properly placed
 // Returns 1 on a valid and correct guess, 0 on a valid and incorrect guess, or a negative int on error
 int wordle_guess(pam_handle_t *pamh, char* word) {
+
+    // Prompt for valid guess
     int valid = 0;
     char *resp = NULL;
 
@@ -100,7 +102,7 @@ int wordle_guess(pam_handle_t *pamh, char* word) {
                 if (known == 1) {
                     valid = 1;
                 } else if (known == 0) {
-                    pam_info(pamh, "Invalid guess: unkown word.");
+                    pam_info(pamh, "Invalid guess: unknown word.");
                 } else {
                     pam_info(pamh, "Warning: error reading dictionary.");
                     valid = 1;
@@ -116,7 +118,6 @@ int wordle_guess(pam_handle_t *pamh, char* word) {
     // Build the next hint based on the guess
     char hint[strlen(word)];
 
-    // Handle perfect and completely incorrect guesses
     for (size_t i = 0; i < strlen(word); i++) {
         if (word[i] == resp[i]) { // Letter is correct and properly placed
             hint[i] = word[i];
@@ -148,6 +149,7 @@ int wordle_guess(pam_handle_t *pamh, char* word) {
     }
 
     pam_info(pamh, "Hint->%s", hint);
+    return 0;
 }
 
 int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv) {
