@@ -116,7 +116,8 @@ int wordle_guess(pam_handle_t *pamh, char* word) {
     }
     
     // Build the next hint based on the guess
-    char hint[strlen(word)];
+    char hint[strlen(word)+1];
+    hint[strlen(word)] = '\0';
 
     for (size_t i = 0; i < strlen(word); i++) {
         if (word[i] == resp[i]) { // Letter is correct and properly placed
@@ -157,7 +158,7 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **ar
 
     pam_info(pamh, "--- Welcome to PAM-Wordle! ---\n\nA five character [a-z] word has been selected.\nYou have %d attempts to guess the word.\n\nAfter each guess you will recieve a hint which indicates:\n? - what letters are wrong.\n* - what letters are in the wrong spot.\n[a-z] - what letters are correct.\n", rounds);
 
-    char word[5] = "linux";
+    char word[6] = "linux\0";
     int word_count = fetch_word(DICT, 0, NULL);
 
     if (word_count > 0) {
