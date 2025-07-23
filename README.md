@@ -2,6 +2,41 @@
 
 Wordle - but as a Linux-PAM module!
 
+## Demo Container
+
+A demo pam-wordle container image is available on GitHub Container Registry:
+
+```bash
+podman pull ghcr.io/lukem1/pam-wordle:latest
+podman run -it pam-wordle
+```
+
+Example:
+
+```
+Welcome to the PAM-Wordle demo container! Run `su wordle` to begin.
+root@container:/# su wordle
+--- Welcome to PAM-Wordle! ---
+
+A five character [a-z] word has been selected.
+You have 6 attempts to guess the word.
+
+After each guess you will recieve a hint which indicates:
+? - what letters are wrong.
+* - what letters are in the wrong spot.
+[a-z] - what letters are correct.
+
+--- Attempt 1 of 6 ---
+Word: crane
+Hint->??*??
+--- Attempt 2 of 6 ---
+Word: ghost
+Hint->?*?**
+--- Attempt 3 of 6 ---
+Word: halts
+Correct!
+```
+
 ## Usage
 
 Note: Tested on `Ubuntu 20.04.4`. This documentation may not be accurate for other systems.
